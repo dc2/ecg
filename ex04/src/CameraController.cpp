@@ -17,7 +17,7 @@ void CameraController::updateMousePos(int x, int y) {
         mY = y;
         
         mTheta += dx / 2.;
-        mPhi += dy / 5.;
+        mPhi += dy / 2.;
         
         mTheta -= (mTheta > 360) ? 360 : 0;
         mPhi -= (mPhi > 360) ? 360 : 0;
@@ -62,7 +62,7 @@ void CameraController::move(Motion motion) {
     glm::vec3 center = getCenter();
     glm::vec3 lookDir = glm::normalize(center - mCameraPosition) / 10.f;
     glm::vec3 rightDir = glm::cross(lookDir, {0, 1, 0});
-    glm::vec3 upDir = glm::cross(lookDir, rightDir);
+    glm::vec3 upDir = glm::cross(rightDir, lookDir);
     
     switch (motion) {
     case MOVE_FORWARD:
@@ -120,6 +120,8 @@ void CameraController::resetOrientation(float theta, float phi, float dist) {
     mCameraPosition = glm::vec3(sin(mTheta) * cos(mPhi) * dist,
                                 sin(mPhi) * dist,
                                 cos(mTheta) * cos(mPhi) * dist);
+    //auto center = getCenter();
+    //center = center;
     // lookAt position is now (0, 0, 0) //
 }
 
@@ -170,7 +172,7 @@ glm::vec3 CameraController::getCameraPosition(void) {
 glm::vec3 CameraController::getCenter()
 {
     glm::vec3 center = mCameraPosition + glm::vec3(glm::rotate(mTheta, glm::vec3(0, 1, 0)) * glm::vec4(0, 0, -1, 0));
-    center.y = glm::sin(glm::radians(mPhi));
+    center.y += glm::sin(glm::radians(mPhi));
     
     return center;
 }
