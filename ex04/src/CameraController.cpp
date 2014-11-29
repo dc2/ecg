@@ -60,16 +60,20 @@ void CameraController::move(Motion motion) {
     // init direction multiplicator (forward/backward, left/right are SYMMETRIC!) //
     //int dir = 1;
     glm::vec3 center = getCenter();
-    glm::vec3 lookDir = glm::normalize(center - mCameraPosition) / 10.f;
-    glm::vec3 rightDir = glm::cross(lookDir, {0, 1, 0});
-    glm::vec3 upDir = glm::cross(rightDir, lookDir);
+    glm::vec3 lookDir = glm::normalize(mCameraPosition - center);
+    glm::vec3 rightDir = glm::cross({0, 1, 0}, lookDir);
+    glm::vec3 upDir = glm::cross(lookDir, rightDir);
+    
+    lookDir /= 10.f;
+    rightDir /= 10.f;
+    upDir /= 10.f;
     
     switch (motion) {
     case MOVE_FORWARD:
-        mCameraPosition += lookDir;
+        mCameraPosition -= lookDir;
         break;
     case MOVE_BACKWARD:
-        mCameraPosition -= lookDir;
+        mCameraPosition += lookDir;
         break;
     case MOVE_RIGHT:
         mCameraPosition += rightDir;

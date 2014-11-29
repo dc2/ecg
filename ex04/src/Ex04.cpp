@@ -424,7 +424,6 @@ void initScene() {
     
     glGenBuffers(1, &cubeVBO);
     glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    
     glBufferData(GL_ARRAY_BUFFER, 24*sizeof(GLfloat), frustrumVertices, GL_STATIC_DRAW);
     
     glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
@@ -435,10 +434,10 @@ void initScene() {
     
     // TODO: copy data into the IBO //
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 24*sizeof(GLint), frustumIndices, GL_STATIC_DRAW);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    //glBindVertexArray(0);
     
     // TODO : create and fill buffers for cube, upload data
     //    - cubeVAO
@@ -454,6 +453,37 @@ void initScene() {
     //        - camSideIBO
     //    - unbind vertex array at the end
     
+    // TODO : define two triangles on camera front side (see figure in the exercise PDF),
+    //	- create index array defining the triangles (array "camSideIndices")
+    //	- create and fill buffers for triangles
+    //		- camSideVAO
+    //		- camSideVBO (use frustumVertices array also used for cube)
+    //		- camSideIBO
+    GLuint camSideIndices[6] = {
+        0, 1, 2,
+        2, 3, 0
+    };
+  
+    glGenVertexArrays(1, &camSideVAO);
+    glBindVertexArray(camSideVAO);
+  
+    glGenBuffers(1, &camSideVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, camSideVBO);
+    glBufferData(GL_ARRAY_BUFFER, 12 * sizeof(GLfloat), frustrumVertices, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, false, 0, 0);
+    glEnableVertexAttribArray(0);
+    
+    glGenBuffers(1, &camSideIBO);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, camSideIBO);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 6 * sizeof(GLuint), camSideIndices, GL_STATIC_DRAW);
+    
+    // unbind buffers //
+    
+    //glBindBuffer(GL_ARRAY_BUFFER, 0);
+    //glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+    //glBindVertexArray(0);
+    
 }
 
 void deleteScene() {
@@ -468,7 +498,7 @@ void deleteScene() {
 void renderScene() {
     // init scene graph by cloning the top entry, which can now be manipulated //
     glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
-    glm_ModelViewMatrix.top() *= glm::rotate(rotAngle, glm::vec3(0, 1, 0));
+    //glm_ModelViewMatrix.top() *= glm::rotate(rotAngle, glm::vec3(0, 1, 0));
     
     GLfloat rot_armadillo_y[] = {45.f, -45.f, 135.f, -135.f};
     GLfloat rot_bunny_y[] = {85.f, -5.f, 175.f, -95.f};
@@ -499,15 +529,29 @@ void renderScene() {
     glm_ModelViewMatrix.pop();
 }
 
-void renderCamera() {
-    glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
-    glm_ModelViewMatrix.top() *= (glm::affineInverse(cameraView.getModelViewMat()));
-    glm_ModelViewMatrix.top() *= (glm::scale(glm::vec3(0.1, 0.1, 0.1)));
-    
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "modelview"), 1, false, glm::value_ptr(glm_ModelViewMatrix.top()));
+void renderCamera(glm::mat4 modelview) {
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "modelview"), 1, false, glm::value_ptr(modelview));
     objLoader.getMeshObj("camera")->render();
+}
+
+void renderFrustum(glm::mat4 modelview) {
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "modelview"), 1, false, glm::value_ptr(modelview));
     
-    glm_ModelViewMatrix.pop();
+    glUniform3f(glGetUniformLocation(shaderProgram, "override_color"), 1, 1, 1);
+    glUniform1i(glGetUniformLocation(shaderProgram, "use_override_color"), true);
+    glBindVertexArray(cubeVAO);
+        glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    glUniform1i(glGetUniformLocation(shaderProgram, "use_override_color"), false);
+}
+
+void renderCameraSide() {
+    glUniform3f(glGetUniformLocation(shaderProgram, "override_color"), 0, 1, 0);
+    glUniform1i(glGetUniformLocation(shaderProgram, "use_override_color"), true);
+    glBindVertexArray(camSideVAO);
+        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+    glBindVertexArray(0);
+    glUniform1i(glGetUniformLocation(shaderProgram, "use_override_color"), false);
 }
 
 // camera perspective
@@ -516,17 +560,12 @@ void renderCameraView() {
     setViewport(VIEW::CAMERA_VIEW);
     
     // TODO : set the correct projection matrix to uniform variable "projection"
-    //auto projection = (glm::mat4(2.414214, 0.000000, 0.000000, 0.000000, 0.000000, 2.414214, 0.000000, 0.000000, 0.000000, 0.000000, -1.002002, -1.000000, 0.000000, 0.000000, -0.020020, 0.000000));
-    
-    //glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, false, glm::value_ptr(projection));
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, false, glm::value_ptr(cameraView.getProjectionMat()));
     
     // TODO : set post transformation to identity in shader (uniform variable "cv_transform")
     glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "cv_transform"), 1, false, glm::value_ptr(glm::mat4(1)));
     
     // TODO : get model view matrix from the camera and set it on top of model view stack
-    //auto modelView =  (glm::mat4(0.707107, -0.408248, 0.577350, 0.000000, 0.000000, 0.816497, 0.577350, 0.000000, -0.707107, -0.408248, 0.577350, 0.000000, 0.000000, 0.000000, -1.732051, 1.000000));
-    //glm_ModelViewMatrix.push(modelView);
     glm_ModelViewMatrix.push(cameraView.getModelViewMat());
     
     // TODO : render scene
@@ -552,79 +591,57 @@ void renderCameraSpaceVisualization() {
     renderScene();
     
     // TODO : render the camera model
-    //    - compute and set the correct model view matrix containing the inversed model view of the first camera
-    //      You should use the function glm::affineInverse() for this task.
-    //  - scale the model down uniformly to 0.1 so that the model has an apropriate dimension
-    //    - render the model
-    
-    renderCamera();
+    glm::mat4 modelview = glm_ModelViewMatrix.top();
+    modelview *= (glm::affineInverse(cameraView.getModelViewMat()));
+    modelview *= (glm::scale(glm::vec3(0.1, 0.1, 0.1)));
+    renderCamera(modelview);
     
     // TODO : render the camera frustum
-    //    - Compute and set the correct model view matrix, containing the inversed
-    //      model view matrix and inversed projection matrix of the first camera.
-    //      Since a projection matrix represents no affine transformation, use the
-    //      function invertProjectionMat() for computation.
-    //    - render the frustum cube
+    modelview = glm_ModelViewMatrix.top();
+    modelview *= glm::affineInverse(cameraView.getModelViewMat());
+    modelview *= invertProjectionMat(cameraView.getProjectionMat());
     
-    
-    
-    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "modelview"), 1, false, glm::value_ptr(sceneView.getModelViewMat()*glm::affineInverse(cameraView.getModelViewMat())*invertProjectionMat(cameraView.getProjectionMat())));
-    //glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, false, glm::value_ptr(sceneView.getProjectionMat()));
-    
-    
-    glBindVertexArray(cubeVAO);
-        glUniform3f(glGetUniformLocation(shaderProgram, "override_color"), 1, 1, 1);
-        glUniform1i(glGetUniformLocation(shaderProgram, "use_override_color"), 1);
-        glDrawElements(GL_LINES, 24, GL_UNSIGNED_INT, 0);
-        glUniform1i(glGetUniformLocation(shaderProgram, "use_override_color"), 0);
-    glBindVertexArray(0);
-    
+    renderFrustum(modelview);
 }
 
 // projected camera frustum (canonical view)
 void renderCanonicalVolumeVisualization() {
-    
-    // TODO: set viewport to right third of the window using setViewport(...) //
+    // TODO: set viewport to right third of the window //
+    setViewport(CV_VIEW);
     
     // TODO : VISUALIZE RENDERED SCENE IN CANONICAL VOLUME
-    //    - set projection matrix
-    //    - set the additional transformation (scaling and rotation)
-    //      to the value "cv_transform" in the shader to "see" the 
-    //      normalized device space
+    glm_ProjectionMatrix.top() = cameraView.getProjectionMat();
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, false, glm::value_ptr(glm_ProjectionMatrix.top()));
     
-    
-    
+    glm::mat4 cv_rotationMat = glm::mat4_cast(glm::conjugate(cv_Rotation));
+    glm::mat4 cv_transform = glm::scale(glm::vec3(cv_scale)) * cv_rotationMat * glm::rotate(rotAngle, glm::vec3(0, 1, 0));
+
     // TODO : send "cv_transform" to the shader program
-    
-    
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "cv_transform"), 1, false, glm::value_ptr(cv_transform));
+
     // TODO: render the scene with manually defined clipping planes
-    // Clipping distance depends on scaling of visualization (cv_scale)
-    //    - This information has to be set in the shader ("clip_plane_distance").
-    //    - enable manual clipping via clipping distance in OpenGL (GL_CLIP_DISTANCE0)
-    //    - set the model view matrix saved in the camera instance on top of the stack
-    //  - render scene
-    
-    // disable clipping distance again
+    glEnable(GL_CLIP_DISTANCE0);
+    glUniform1fv(glGetUniformLocation(shaderProgram, "clip_plane_distance"), 1, &cv_scale);
+
+    glm_ModelViewMatrix.top() = cameraView.getModelViewMat();
+    renderScene();
+
+    // disable clipping distance
     glDisable(GL_CLIP_DISTANCE0);
     
-    // VISUALIZE CANONICAL VOLUME LIMITS
-    
     // TODO : render frustum
-    //        - set projection to CV transformation only, since CV "is projected" already
-    //        - set modelview to identity
-    //        - draw the frustum as lines
+    glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "projection"), 1, false, glm::value_ptr(glm::mat4(1)));
+    renderFrustum(glm::mat4(1));
     
     // TODO : draw two triangles defining the camera side
-    //    - active color override in the fragment shader by setting "use_override_color" to 1
-    //    - set uniform "override_color" to (green = 0,1,0) in the shader program
-    //    - render the triangles
-    //    - set "use_override_color" back to 0
-    
+    renderCameraSide();
+
     // TODO : render camera
-    //    - scale camera model to a sensible value
-    //  - decide where to put the camera model (think about the canonical volume in OpenGL!)
-    //    - draw the camera
+    glm::mat4 camera = glm::translate(glm::vec3(0, 0, -1.5)); // translate the camera in front of the clipping plane
+    camera *= glm::scale(glm::vec3(.1));
+    camera *= glm::rotate(180.f, glm::vec3(0, 1, 0)); // turn the camera right around
     
+    renderCamera(camera);
 }
 
 void updateGL() {
