@@ -391,7 +391,7 @@ ObjLoader objLoader;
 
 void initScene() {
     
-    objLoader.loadObjFile("meshes/armadillo.obj", "armadillo");
+    //objLoader.loadObjFile("meshes/armadillo.obj", "armadillo");
     objLoader.loadObjFile("meshes/bunny.obj", "bunny");
     objLoader.loadObjFile("meshes/camera.obj", "camera");
     
@@ -505,7 +505,7 @@ void renderScene() {
     
     for (int y = -1; y <= 1; y+=2) {
         for (int x = -1; x <= 1; x+=2) {
-            // armadillo
+            /*// armadillo
             glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
                     
             glm_ModelViewMatrix.top() *= glm::translate(glm::vec3((GLfloat)x * 0.15, 0.0, (GLfloat)y * 0.15));
@@ -513,7 +513,7 @@ void renderScene() {
             glm_ModelViewMatrix.top() *= glm::rotate(rot_armadillo_y[glm::max(y,0)*2+glm::max(x,0)], glm::vec3(0,1,0));
             glUniformMatrix4fv(glGetUniformLocation(shaderProgram, "modelview"), 1, false, glm::value_ptr(glm_ModelViewMatrix.top()));
             objLoader.getMeshObj("armadillo")->render();
-            glm_ModelViewMatrix.pop();
+            glm_ModelViewMatrix.pop();*/
             // bunny
             glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
             glm_ModelViewMatrix.top() *= glm::translate(glm::vec3((GLfloat)x * 0.35, 0.0, (GLfloat)y * 0.35));
@@ -593,7 +593,7 @@ void renderCameraSpaceVisualization() {
     // TODO : render the camera model
     glm::mat4 modelview = glm_ModelViewMatrix.top();
     modelview *= (glm::affineInverse(cameraView.getModelViewMat()));
-    modelview *= (glm::scale(glm::vec3(0.1, 0.1, 0.1)));
+    modelview *= (glm::scale(glm::vec3(0.1)));
     renderCamera(modelview);
     
     // TODO : render the camera frustum

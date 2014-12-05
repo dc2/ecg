@@ -14,14 +14,15 @@ vec4 pos;
 void main() {
   vertexColor = (modelview * vec4(normal, 0)).xyz;
   gl_Position = cv_transform * projection * modelview * vec4(vertex, 1.0);
-
+return;
   // Ax + By + Cz + D = 0
-  vec4 clipPlaneXp = vec4(1.0, 0.0, 0.0, clip_plane_distance*clip_plane_distance);
-  vec4 clipPlaneXn = vec4(-1.0, 0.0, 0.0, clip_plane_distance*clip_plane_distance);  
-  vec4 clipPlaneYp = vec4(0.0, 1.0, 0.0, clip_plane_distance*clip_plane_distance);
-  vec4 clipPlaneYn = vec4(0.0, -1.0, 0.0, clip_plane_distance*clip_plane_distance);
-  vec4 clipPlaneZp = vec4(0.0, 0.0, 1.0, clip_plane_distance*clip_plane_distance);
-  vec4 clipPlaneZn = vec4(0.0, 0.0, -1.0, clip_plane_distance*clip_plane_distance);
+  vec4 clipPlaneXp = vec4( 1,  0,  0, clip_plane_distance*clip_plane_distance);
+  vec4 clipPlaneXn = vec4(-1,  0,  0, clip_plane_distance*clip_plane_distance);  
+  vec4 clipPlaneYp = vec4( 0,  1,  0, clip_plane_distance*clip_plane_distance);
+  vec4 clipPlaneYn = vec4( 0, -1,  0, clip_plane_distance*clip_plane_distance);
+  vec4 clipPlaneZp = vec4( 0,  0,  1, clip_plane_distance*clip_plane_distance);
+  vec4 clipPlaneZn = vec4( 0,  0, -1, clip_plane_distance*clip_plane_distance);
+  
   float clipZp = dot(gl_Position, cv_transform * clipPlaneZp);
   float clipZm = dot(gl_Position, cv_transform * clipPlaneZn);
   float clipYp = dot(gl_Position, cv_transform * clipPlaneYp);
@@ -33,5 +34,6 @@ void main() {
   float clipX = min((clipXp), (clipXm));
   float clipZY = min((clipZ), (clipY));
   float clipXYZ = min((clipX), (clipZY));
+  
   gl_ClipDistance[0] = clipXYZ;
 }
