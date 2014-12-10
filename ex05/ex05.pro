@@ -3,7 +3,7 @@ CONFIG += console
 CONFIG -= app_bundle qt
 CONFIG += c++11
 
-QMAKE_CXXFLAGS += -O0 -Wall -Wno-writable-strings
+QMAKE_CXXFLAGS += -O3 -Wall -Wno-writable-strings
 
 LIBS += -lGL -lGLEW -lglut -lAntTweakBar
 INCLUDEPATH += include AntTweakBar/include

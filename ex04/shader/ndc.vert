@@ -14,7 +14,7 @@ vec4 pos;
 void main() {
   vertexColor = (modelview * vec4(normal, 0)).xyz;
   gl_Position = cv_transform * projection * modelview * vec4(vertex, 1.0);
-return;
+
   // Ax + By + Cz + D = 0
   vec4 clipPlaneXp = vec4( 1,  0,  0, clip_plane_distance*clip_plane_distance);
   vec4 clipPlaneXn = vec4(-1,  0,  0, clip_plane_distance*clip_plane_distance);  
