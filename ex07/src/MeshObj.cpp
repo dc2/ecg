@@ -87,6 +87,7 @@ void MeshObj::render(void) {
   if (mVAO != 0) {
     glBindVertexArray(mVAO);
     if(mTexture != -1) {
+        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, mTexture);
     }
     glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, (void*)0);

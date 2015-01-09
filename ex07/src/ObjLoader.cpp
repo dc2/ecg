@@ -305,7 +305,7 @@ std::string ObjLoader::getMaterialTexture(const std::string &fileName, const std
                 }
             }
             
-            if(key == "map_Kd")
+            if(key == "map_Kd" && !material_name.empty())
             {
                 sstr >> texture;
                 std::cout << "use: "<<usemtl << " / "<< texture << std::endl;

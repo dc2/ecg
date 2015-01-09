@@ -53,6 +53,8 @@ std::vector<Material> materials;
 unsigned int lightCount;
 std::vector<LightSource> lights;
 
+int updatetime = 0;
+
 // window controls //
 int CheckGLErrors();
 void updateGL();
@@ -64,7 +66,7 @@ void mouseEvent(int button, int state, int x, int y);
 void mouseMoveEvent(int x, int y);
 
 // camera controls //
-CameraController camera(0, M_PI/4, 20);
+CameraController camera(0, M_PI/4, 3);
 
 // viewport //
 GLint windowWidth, windowHeight;
@@ -86,8 +88,8 @@ int main (int argc, char **argv) {
     glutInitContextFlags(GLUT_FORWARD_COMPATIBLE);
     glutInitContextProfile(GLUT_CORE_PROFILE);
     
-    windowWidth = 512;
-    windowHeight = 512;
+    windowWidth = 800;
+    windowHeight = 600;
     glutInitWindowSize(windowWidth, windowHeight);
     glutInitWindowPosition(100, 100);
     glutCreateWindow("Exercise 07 - Textures");
@@ -161,6 +163,8 @@ void Reshape(int width, int height)
     windowWidth = width;
     windowHeight = height;
     
+    camera.setAspect(float(width)/height);
+    
 }
 
 void close() {
@@ -172,6 +176,7 @@ void close() {
 
 void initScene() {
     objLoader->loadObjFile("meshes/plane2.obj", "plane");
+    objLoader->loadObjFile("meshes/sphere.obj", "sphere");
     
     // TODO (7.4) : load trashbin and ball from disk and create renderable meshes //
     objLoader->loadObjFile("meshes/trashbin.obj", "trashbin");
@@ -208,17 +213,22 @@ void initScene() {
     light.diffuse_color = glm::vec3(1.0, 1.0, 1.0);
     light.specular_color = glm::vec3(1.0, 1.0, 1.0);
     
-    light.position = glm::vec3(15, 15, 15);
+    light.position = glm::vec3(10, 0, 10);
     lights.push_back(light);
     
-    light.position = glm::vec3(-15, 15, 15);
+    light.position = glm::vec3(-10, 0, 10);
     lights.push_back(light);
     
-    light.position = glm::vec3(15, 15, -15);
+    light.position = glm::vec3(10, 0, -10);
     lights.push_back(light);
     
-    light.position = glm::vec3(-15, 15, -15);
+    light.position = glm::vec3(-10, 0, -10);
     lights.push_back(light);
+    
+    light.position = glm::vec3(0, -5, 0);
+    lights.push_back(light);
+    
+    
     
     // Todo (7.5) : estimate nicer lighting situation for Transformers //
     
@@ -258,6 +268,9 @@ void renderScene() {
             ++shaderLightIdx;
         }
     }
+    
+    (*--lights.end()).position.y = 2*glm::sin(glm::radians(float(updatetime++)));
+    (*--lights.end()).position.x = 2*glm::cos(glm::radians(float(updatetime)));
 
     shaderTex->setUniform("usedLightCount", shaderLightIdx);
     
@@ -272,28 +285,38 @@ void renderScene() {
     glActiveTexture(GL_TEXTURE1);
     {
         glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
-        glm_ModelViewMatrix.top() *= glm::translate(glm::vec3(3, 0, 0));
+        glm_ModelViewMatrix.top() *= glm::translate(glm::vec3(1, 0, 0));
+        glm_ModelViewMatrix.top() *= glm::rotate(-glm::radians(90.f), glm::vec3(0, 1, 0));
         shaderTex->setUniform("modelview", glm_ModelViewMatrix.top());
         
-        glBindTexture(GL_TEXTURE_2D, textureData1.texture);
-        
         objLoader->getMeshObj("megatron")->render();
-        //objLoader->getMeshObj("optimus")->render();
         
         glm_ModelViewMatrix.pop();
     }
     
     {
         glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
-        glm_ModelViewMatrix.top() *= glm::translate(glm::vec3(-2, 0, 0));
+        glm_ModelViewMatrix.top() *= glm::translate(glm::vec3(-1, 0, 0));
+        glm_ModelViewMatrix.top() *= glm::rotate(glm::radians(90.f), glm::vec3(0, 1, 0));
         
         shaderTex->setUniform("modelview", glm_ModelViewMatrix.top());
-        glBindTexture(GL_TEXTURE_2D, textureData2.texture);
         
         objLoader->getMeshObj("optimus")->render();
-        
-        // restore scene graph to previous state //
+
         glm_ModelViewMatrix.pop();
+    }
+    
+    {
+        glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
+        glm_ModelViewMatrix.top() *= glm::translate((*--lights.end()).position);
+        glm_ModelViewMatrix.top() *= glm::scale(glm::vec3(.05));
+        
+        shaderTex->setUniform("modelview", glm_ModelViewMatrix.top());
+        
+        objLoader->getMeshObj("sphere")->render();
+
+        glm_ModelViewMatrix.pop();
+        
     }
 }
 

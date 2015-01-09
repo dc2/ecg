@@ -34,6 +34,7 @@ out vec3 color;
 void main() {
 
   vec3 texel= texture(tex, vec2(vertexTexCoord.s, 1.0-vertexTexCoord.t)).rgb;
+  //vec3 texel= texture(tex, vertexTexCoord).rgb;
 
   int lightCount = max(min(usedLightCount, maxLightCount), 0);
   // normalize the vectors passed from your vertex program //
