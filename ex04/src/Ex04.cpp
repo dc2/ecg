@@ -140,6 +140,7 @@ int main (int argc, char **argv) {
     initShader();
     glError("shader initialized");
     
+    
     initScene();
     glError("scene initialized");
     

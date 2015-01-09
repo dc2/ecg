@@ -3,6 +3,8 @@ CONFIG += console
 CONFIG -= app_bundle qt
 CONFIG += c++11
 
+DEFINES += __GXX_EXPERIMENTAL_CXX0X__
+
 QMAKE_CXXFLAGS += -O0 -Wall -Wno-writable-strings
 
 LIBS += -lGL -lGLEW -lglut -lAntTweakBar
