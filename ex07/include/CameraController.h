@@ -4,7 +4,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#define STEP_DISTANCE 0.05f
+#define STEP_DISTANCE 0.5f
 
 class CameraController {
   public:

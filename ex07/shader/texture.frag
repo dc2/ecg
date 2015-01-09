@@ -33,6 +33,8 @@ out vec3 color;
 
 void main() {
 
+  vec3 texel= texture(tex, vec2(vertexTexCoord.s, 1.0-vertexTexCoord.t)).rgb;
+
   int lightCount = max(min(usedLightCount, maxLightCount), 0);
   // normalize the vectors passed from your vertex program //
   vec3 E = normalize(eyeDir);
@@ -56,6 +58,5 @@ void main() {
   
   // assign the final color to the fragment output variable //
   // TODO: combine the light/material color and the texture color properly //
-  color = diffuseTerm*texture(tex, vertexTexCoord).rgb + ambientTerm + specularTerm;
-  //color = texture(tex, vertexTexCoord).rgb;
+  color = texel * (diffuseTerm + ambientTerm + specularTerm);
 }

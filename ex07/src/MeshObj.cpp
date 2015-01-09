@@ -3,6 +3,9 @@
 #include <limits>
 #include <SDL2/SDL_image.h>
 
+#include <opencv/cv.h>
+#include <opencv/highgui.h>
+
 MeshObj::MeshObj() {
   mVAO = 0;
   mVBO_position = 0;
@@ -20,8 +23,10 @@ MeshObj::~MeshObj() {
   glDeleteVertexArrays(1, &mVAO);
 }
 
-void MeshObj::setData(const MeshData &meshData) {
+void MeshObj::setData(const MeshData &meshData, GLint texture) {
   mIndexCount = meshData.indices.size();
+  
+  mTexture = texture;
   
   // TODO: extend this method to upload texture coordinates as another VBO //
   // - texture coordinates are at location 2 within the shader code
@@ -81,10 +86,14 @@ void MeshObj::render(void) {
   // render your VAO //
   if (mVAO != 0) {
     glBindVertexArray(mVAO);
+    if(mTexture != -1) {
+        glBindTexture(GL_TEXTURE_2D, mTexture);
+    }
     glDrawElements(GL_TRIANGLES, mIndexCount, GL_UNSIGNED_INT, (void*)0);
     glBindVertexArray(0);
   }
 }
+
 
 
 void TextureData::init(std::string file) {
@@ -124,6 +133,7 @@ void TextureData::init(std::string file) {
             break;
         }
         
+
         glBindTexture(GL_TEXTURE_2D, texture);
         glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format, GL_UNSIGNED_BYTE, image->pixels);
         //glHint(GL_GENERATE_MIPMAP_HINT, GL_NICEST);
@@ -142,8 +152,23 @@ void TextureData::init(std::string file) {
     }
 }
 
-
-TextureData::TextureData()
+void Mesh::addMesh(MeshObj *mesh)
 {
-    
+    m_meshes.push_back(mesh);
+}
+
+Mesh::~Mesh()
+{
+    for(auto m: m_meshes)
+    {
+        delete m;
+    }
+}
+
+void Mesh::render()
+{
+    for(auto m: m_meshes)
+    {
+        m->render();
+    }
 }

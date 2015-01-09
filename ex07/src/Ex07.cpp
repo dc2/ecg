@@ -1,25 +1,21 @@
 #include "Ex07.h"
 #include <sstream>
-// #include <opencv/cv.h>
-// #include <opencv/highgui.h>
+
+#include <glm/gtc/matrix_transform.hpp>
+
+#include "lib/ShaderProgram.h"
 
 // OpenGL and GLSL stuff //
 void initGL();
 void initShader();
-bool enableShader();
-void disableShader();
-void deleteShader();
+
 bool glError(char *msg);
-void printShaderInfoLog(GLuint shader);
-void printProgramInfoLog(GLuint program);
-GLuint loadShaderFile(const char* fileName, GLenum shaderType);
-// the used shader program //
-GLuint shaderProgram = 0;
-// this map stores uniform locations of our shader program //
-std::map<std::string, GLint> uniformLocations;
 
-TextureData textureData;
+std::unique_ptr<ShaderProgram> shaderTex;
+std::unique_ptr<ShaderProgram> shaderSimple;
 
+TextureData textureData1;
+TextureData textureData2;
 
 // this struct helps to keep light source parameter uniforms together //
 struct UniformLocation_Light {
@@ -41,7 +37,7 @@ struct Material {
 };
 
 struct LightSource {
-    LightSource() : enabled(true) {};
+    LightSource() : enabled(true) {}
     bool enabled;
     glm::vec3 ambient_color;
     glm::vec3 diffuse_color;
@@ -53,6 +49,7 @@ struct LightSource {
 unsigned int materialIndex;
 unsigned int materialCount;
 std::vector<Material> materials;
+
 unsigned int lightCount;
 std::vector<LightSource> lights;
 
@@ -67,7 +64,7 @@ void mouseEvent(int button, int state, int x, int y);
 void mouseMoveEvent(int x, int y);
 
 // camera controls //
-CameraController camera(0, M_PI/4, 5);
+CameraController camera(0, M_PI/4, 20);
 
 // viewport //
 GLint windowWidth, windowHeight;
@@ -84,7 +81,7 @@ ObjLoader *objLoader = 0;
 
 int main (int argc, char **argv) {
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_MULTISAMPLE);
     glutInitContextVersion(3,3);
     glutInitContextFlags(GLUT_FORWARD_COMPATIBLE);
     glutInitContextProfile(GLUT_CORE_PROFILE);
@@ -120,18 +117,15 @@ int main (int argc, char **argv) {
     glm_ProjectionMatrix.push(glm::mat4(1));
     glm_ModelViewMatrix.push(glm::mat4(1));
     
-    initShader();
+    shaderTex = ShaderProgram::createFromFiles("shader/texture.vert", "shader/texture.frag");
+    shaderSimple = ShaderProgram::createFromFiles("shader/simple.vert", "shader/simple.frag");
     initScene();
-    textureData.init("textures/trashbin.png");
     
-    // start render loop //
-    if (enableShader()) {
-        glutMainLoop();
-        disableShader();
-        
-        // clean up allocated data //
-        deleteShader();
-    }
+    textureData1.init("textures/trashbin.png");
+    textureData2.init("textures/ball.jpg");
+    
+    shaderTex->bind();
+    glutMainLoop();
     
     return 0;
 }
@@ -160,16 +154,6 @@ void initGL() {
     glEnable(GL_DEPTH_TEST);
 }
 
-std::string getUniformStructLocStr(const std::string &structName, const std::string &memberName, int arrayIndex = -1) {
-    std::stringstream sstr("");
-    sstr << structName;
-    if (arrayIndex >= 0) {
-        sstr << "[" << arrayIndex << "]";
-    }
-    sstr << "." << memberName;
-    return sstr.str();
-}
-
 // Callback function called by GLUT when window size changes
 void Reshape(int width, int height)
 {
@@ -180,171 +164,22 @@ void Reshape(int width, int height)
 }
 
 void close() {
-    
     // free allocated objects
     delete objLoader;
     
     std::cout << "Shutdown program." << std::endl;
 }
 
-// Print information about the compiling step
-void printShaderInfoLog(GLuint shader)
-{
-    GLint infologLength = 0;
-    GLsizei charsWritten  = 0;
-    char *infoLog;
-    
-    glGetShaderiv(shader, GL_INFO_LOG_LENGTH,&infologLength);		
-    infoLog = (char *)malloc(infologLength);
-    glGetShaderInfoLog(shader, infologLength, &charsWritten, infoLog);
-    printf("%s\n",infoLog);
-    free(infoLog);
-}
-
-// Print information about the linking step
-void printProgramInfoLog(GLuint program)
-{
-    GLint infoLogLength = 0;
-    GLsizei charsWritten  = 0;
-    char *infoLog;
-    
-    glGetProgramiv(program, GL_INFO_LOG_LENGTH,&infoLogLength);
-    infoLog = (char *)malloc(infoLogLength);
-    glGetProgramInfoLog(program, infoLogLength, &charsWritten, infoLog);
-    printf("%s\n",infoLog);
-    free(infoLog);
-}
-
-void initShader() {
-    shaderProgram = glCreateProgram();
-    // check if operation failed //
-    if (shaderProgram == 0) {
-        std::cout << "(initShader) - Failed creating shader program." << std::endl;
-        return;
-    }
-    
-    GLuint vertexShader = loadShaderFile("shader/texture.vert", GL_VERTEX_SHADER);
-    if (vertexShader == 0) {
-        std::cout << "(initShader) - Could not create vertex shader." << std::endl;
-        deleteShader();
-        return;
-    }
-    GLuint fragmentShader = loadShaderFile("shader/texture.frag", GL_FRAGMENT_SHADER);
-    if (fragmentShader == 0) {
-        std::cout << "(initShader) - Could not create vertex shader." << std::endl;
-        deleteShader();
-        return;
-    }
-    
-    // successfully loaded and compiled shaders -> attach them to program //
-    glAttachShader(shaderProgram, vertexShader);
-    glAttachShader(shaderProgram, fragmentShader);
-    
-    // mark shaders for deletion after clean up (they will be deleted, when detached from all shader programs) //
-    glDeleteShader(vertexShader);
-    glDeleteShader(fragmentShader);
-    
-    // link shader program //
-    glLinkProgram(shaderProgram);
-    
-    // get log //
-    printProgramInfoLog(shaderProgram);
-    
-    // set address of fragment color output //
-    glBindFragDataLocation(shaderProgram, 0, "color");
-    
-    // get uniform locations for common variables //
-    uniformLocations["projection"] = glGetUniformLocation(shaderProgram, "projection");
-    uniformLocations["modelview"] = glGetUniformLocation(shaderProgram, "modelview");
-    
-    // material unform locations //
-    uniformLocations["material.ambient"] = glGetUniformLocation(shaderProgram, "material.ambient_color");
-    uniformLocations["material.diffuse"] = glGetUniformLocation(shaderProgram, "material.diffuse_color");
-    uniformLocations["material.specular"] = glGetUniformLocation(shaderProgram, "material.specular_color");
-    uniformLocations["material.shininess"] = glGetUniformLocation(shaderProgram, "material.specular_shininess");
-    
-    // store the uniform locations for all light source properties
-    for (int i = 0; i < 10; ++i) {
-        UniformLocation_Light lightLocation;
-        lightLocation.ambient_color = glGetUniformLocation(shaderProgram, getUniformStructLocStr("lightSource", "ambient_color", i).c_str());
-        lightLocation.diffuse_color = glGetUniformLocation(shaderProgram, getUniformStructLocStr("lightSource", "diffuse_color", i).c_str());
-        lightLocation.specular_color = glGetUniformLocation(shaderProgram, getUniformStructLocStr("lightSource", "specular_color", i).c_str());
-        lightLocation.position = glGetUniformLocation(shaderProgram, getUniformStructLocStr("lightSource", "position", i).c_str());
-        
-        
-        uniformLocations_Lights[std::to_string(i)] = lightLocation;
-    }
-    uniformLocations["usedLightCount"] = glGetUniformLocation(shaderProgram, "usedLightCount");
-    
-    // TODO: get texture uniform location //
-    uniformLocations["tex"] = glGetUniformLocation(shaderProgram, "tex");
-    
-}
-
-bool enableShader() {
-    if (shaderProgram > 0) {
-        glUseProgram(shaderProgram);
-    } else {
-        std::cout << "(enableShader) - Shader program not initialized." << std::endl;
-    }
-    return shaderProgram > 0;
-}
-
-void disableShader() {
-    glUseProgram(0);
-}
-
-void deleteShader() {
-    // use standard pipeline //
-    glUseProgram(0);
-    // delete shader program //
-    glDeleteProgram(shaderProgram);
-    shaderProgram = 0;
-}
-
-// loads a source file and directly compiles it to a shader of 'shaderType' //
-GLuint loadShaderFile(const char* fileName, GLenum shaderType) {
-    GLuint shader = glCreateShader(shaderType);
-    // check if operation failed //
-    if (shader == 0) {
-        std::cout << "(loadShaderFile) - Could not create shader." << std::endl;
-        return 0;
-    }
-    
-    // load source code from file //
-    std::string shaderCode;
-    std::ifstream shaderStream(fileName, std::ios::in);
-    if(shaderStream.is_open()){
-        std::string line = "";
-        while(std::getline(shaderStream, line))
-            shaderCode += "\n" + line;
-        shaderStream.close();
-    }
-    else {
-        printf("Impossible to open %s. Please check your directories !\n", fileName);
-        return 0;
-    }
-    char const * shaderSrc = shaderCode.c_str();
-    
-    if (shaderSrc == NULL) return 0;
-    // pass source code to new shader object //
-    glShaderSource(shader, 1, &shaderSrc, NULL);
-    
-    // compile shader //
-    glCompileShader(shader);
-    
-    // log compile messages, if any //
-    printShaderInfoLog(shader);
-    
-    // return compiled shader (may have compiled WITH errors) //
-    return shader;
-}
-
 void initScene() {
+    objLoader->loadObjFile("meshes/plane2.obj", "plane");
+    
     // TODO (7.4) : load trashbin and ball from disk and create renderable meshes //
     objLoader->loadObjFile("meshes/trashbin.obj", "trashbin");
+    objLoader->loadObjFile("meshes/ball.obj", "ball");
     
     // TODO (7.5): load Optimus Prime and Megatron from disk and create renderable meshes //
+    objLoader->loadObjFile("meshes/optimus.obj", "optimus");
+    objLoader->loadObjFile("meshes/megatron.obj", "megatron");
     
     // init materials //
     Material mat;
@@ -392,9 +227,18 @@ void initScene() {
 }
 
 void renderScene() {
-    glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
+    {
+        shaderSimple->bind();
+        glDisable(GL_DEPTH_TEST);
+        
+        shaderSimple->setUniform("modelview",  glm::mat4(1));
+        shaderSimple->setUniform("projection", glm::mat4(1));
     
-    glUniformMatrix4fv(uniformLocations["modelview"], 1, false, glm::value_ptr(glm_ModelViewMatrix.top()));
+        objLoader->getMeshObj("plane")->render();
+    }
+    
+    shaderTex->bind();
+    glEnable(GL_DEPTH_TEST);
     
     // TODO: upload the properties of the currently active light sources here //
     // - ambient, diffuse and specular color
@@ -404,37 +248,55 @@ void renderScene() {
     int shaderLightIdx = 0;
     for (unsigned i = 0; i < lightCount; ++i) {
         if (lights[i].enabled) {
-            const UniformLocation_Light &light = uniformLocations_Lights[std::to_string(i)];
+            std::string light_name = "lightSource["+std::to_string(i)+"]";
             
-            glUniform3fv(light.position, 1, glm::value_ptr(lights[i].position));
-            glUniform3fv(light.ambient_color, 1, glm::value_ptr(lights[i].ambient_color));
-            glUniform3fv(light.diffuse_color, 1, glm::value_ptr(lights[i].diffuse_color));
-            glUniform3fv(light.specular_color, 1, glm::value_ptr(lights[i].specular_color));
+            shaderTex->setUniform(light_name+".position", lights[i].position);
+            shaderTex->setUniform(light_name+".ambient_color", lights[i].ambient_color);
+            shaderTex->setUniform(light_name+".diffuse_color", lights[i].diffuse_color);
+            shaderTex->setUniform(light_name+".specular_color", lights[i].specular_color);
             
             ++shaderLightIdx;
         }
     }
+
+    shaderTex->setUniform("usedLightCount", shaderLightIdx);
     
-    // upload lights here....
+    shaderTex->setUniform("material.ambient_color", materials[materialIndex].ambient_color);
+    shaderTex->setUniform("material.diffuse_color", materials[materialIndex].diffuse_color);
+    shaderTex->setUniform("material.specular_color", materials[materialIndex].specular_color);
+    shaderTex->setUniform("material.specular_shininess", materials[materialIndex].specular_shininess);
     
-    glUniform1i(uniformLocations["usedLightCount"], shaderLightIdx);
-    
-    // upload the chosen material properties here //
-    glUniform3fv(uniformLocations["material.ambient"], 1, glm::value_ptr(materials[materialIndex].ambient_color));
-    glUniform3fv(uniformLocations["material.diffuse"], 1, glm::value_ptr(materials[materialIndex].diffuse_color));
-    glUniform3fv(uniformLocations["material.specular"], 1, glm::value_ptr(materials[materialIndex].specular_color));
-    glUniform1f(uniformLocations["material.shininess"], materials[materialIndex].specular_shininess);
+    shaderTex->setUniform("tex", 1);
     
     // TODO: upload respective texture to first texture unit and render the actual scene //
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureData.texture);
-    glUniform1i(uniformLocations["tex"], 0);
+    glActiveTexture(GL_TEXTURE1);
+    {
+        glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
+        glm_ModelViewMatrix.top() *= glm::translate(glm::vec3(3, 0, 0));
+        shaderTex->setUniform("modelview", glm_ModelViewMatrix.top());
+        
+        glBindTexture(GL_TEXTURE_2D, textureData1.texture);
+        
+        objLoader->getMeshObj("megatron")->render();
+        //objLoader->getMeshObj("optimus")->render();
+        
+        glm_ModelViewMatrix.pop();
+    }
     
-    objLoader->getMeshObj("trashbin")->render();
-    
-    // restore scene graph to previous state //
-    glm_ModelViewMatrix.pop();
+    {
+        glm_ModelViewMatrix.push(glm_ModelViewMatrix.top());
+        glm_ModelViewMatrix.top() *= glm::translate(glm::vec3(-2, 0, 0));
+        
+        shaderTex->setUniform("modelview", glm_ModelViewMatrix.top());
+        glBindTexture(GL_TEXTURE_2D, textureData2.texture);
+        
+        objLoader->getMeshObj("optimus")->render();
+        
+        // restore scene graph to previous state //
+        glm_ModelViewMatrix.pop();
+    }
 }
+
 
 void updateGL() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -445,7 +307,7 @@ void updateGL() {
     // get projection mat from camera controller //
     glm_ProjectionMatrix.top() = camera.getProjectionMat();
     // upload projection matrix //
-    glUniformMatrix4fv(uniformLocations["projection"], 1, false, glm::value_ptr(glm_ProjectionMatrix.top()));
+    shaderTex->setUniform("projection", glm_ProjectionMatrix.top());
     
     // init scene graph by cloning the top entry, which can now be manipulated //
     // get modelview mat from camera controller //
@@ -548,7 +410,7 @@ void keyboardEvent(unsigned char key, int x, int y) {
 }
 
 void mouseEvent(int button, int state, int x, int y) {
-    CameraController::MouseState mouseState;
+    CameraController::MouseState mouseState = CameraController::NO_BTN;
     if (state == GLUT_DOWN) {
         switch (button) {
         case GLUT_LEFT_BUTTON : {

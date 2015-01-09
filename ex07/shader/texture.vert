@@ -1,9 +1,5 @@
 #version 330
 
-//sadly we need this to iterate over the lightsources on nvidia cards
-//this might cause problems if other loops should not be unrolled
-#pragma optionNV (unroll all)
-
 layout(location = 0) in vec3 vertex;
 layout(location = 1) in vec3 vertex_normal;
 layout(location = 2) in vec2 vertex_texcoord;

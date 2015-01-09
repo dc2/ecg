@@ -12,10 +12,13 @@ class ObjLoader {
   public:
     ObjLoader();
     ~ObjLoader();
-    MeshObj* loadObjFile(std::string fileName, std::string ID = "");
-    MeshObj* getMeshObj(std::string ID);
+    Mesh* loadObjFile(const std::string &fileName, const std::string &ID = "");
+    Mesh *getMeshObj(const std::string &ID);
+    
+    std::string getMaterialTexture(const std::string &fileName, const std::string &usemtl);
+    
   private:
-    std::map<std::string, MeshObj*> mMeshMap;
+    std::map<std::string, Mesh*> mMeshMap;
 };
 
 #endif
